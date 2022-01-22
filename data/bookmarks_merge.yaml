@@ -1,0 +1,119 @@
+# YAML config file for scripts/bookmarks_merge.py
+# define the data structures used to manipulate the stored information
+# primarily to reduce duplication, remove unnecessary content and drive similar phrases to a common definition
+
+#-------------------------------------------------------------------------
+# - locations element [3]
+#-------------------------------------------------------------------------
+# for each address reduce location set by: replace, reduce, & drop
+# replaceStringsAll is a list of lists where 0 is match pattern and 1 element is the replace string
+replaceStringsAll:
+    -
+        - 'Bookmarks Menu::'
+        - 'Bookmarks::'
+    -
+        - 'Bookmarks::Bookmarks Toolbar Folder1'
+        - 'Bookmarks::Bookmarks Toolbar'
+    -
+        - 'Bookmarks::Bookmarks Toolbar Folder'
+        - 'Bookmarks::Bookmarks Toolbar'
+    -
+        - 'Firefox and Mozilla Links XP'
+        - 'Firefox and Mozilla Links'
+    -
+        - 'Bookmarks::Firefox and Mozilla Links'
+        - 'Bookmarks::Mozilla Firefox'
+    -
+        - 'NEWS'
+        - 'News'
+    -
+        - 'news'
+        - 'News'
+    -
+        - 'Bookmarks_bar'
+        - 'Bookmarks_Toolbar'
+
+# dropSetLeading (list) strings to match at the beginning of the element, matches are removed
+dropSetLeading:
+    - 'Bookmarks::bookmarks_main'
+    # Bookmarks::Bookmarks Toolbar Folder::new_bookmarks_otto  # ???
+    - 'Bookmarks::bookmarks_xp'
+    # 'Bookmarks::Mozilla Firefox'
+    - 'Bookmarks::Other Bookmarks'
+    - 'Bookmarks::Other Bookmarks::All Bookmarks'
+    - 'Bookmarks'
+
+# replaceStringsFirst is a list of lists where 0 is match pattern and 1 element is the replace string
+#    action applied: change the replacement string then remove leading ::
+replaceStringsFirst:
+    - 
+        - '^auto'
+        - 'transportation::auto'
+    - 
+        - '^moto'
+        - 'transportation::moto'
+    - 
+        - 'auto::mazda RX-7'
+        - 'auto::makes::mazda::mazda RX-7'
+    - 
+        - 'auto::toyota MR-2'
+        - 'auto::makes::toyota::toyota MR-2'
+    - 
+        - 'auto::honda'
+        - 'auto::makes::honda'
+    - 
+        - 'auto::triumph'
+        - 'auto::makes::triumph'
+    - 
+        - 'auto::aston martin'
+        - 'auto::makes::aston martin'
+    - 
+        - 'auto::porsche'
+        - 'auto::makes::porsche'
+    - 
+        - 'auto::honda::NSX'
+        - 'auto::makes::honda::NSX'
+    - 
+        - 'auto::ferrari'
+        - 'auto::makes:ferrari'
+    - 
+        - 'travel::London::Poland'
+        - 'travel::Poland'
+
+#-------------------------------------------------------------------------
+# - description element [4]
+#-------------------------------------------------------------------------
+    
+# - desc_join_addrs (list) urls
+#   for each defined url address replace the defined description 
+#       with the unique set of all descriptions defined by splitting description on \n
+#       saved as a list
+#   ie assumes original description elements are \n separated in the value
+#   could make dictionary url:separator but only know to apply to 1 file
+desc_join_addrs:
+    - 'https://www.bbc.com/'
+
+# - desc_dup_mod (dict) of key = url, value = description list to use
+#   basically applied to reduce descriptions
+desc_dup_mod:
+    https://github.com/:
+        - 'Where the world units software'
+    https://www.linuxformat.com/:
+        - 'Linux News Magazine'
+    
+#-------------------------------------------------------------------------
+# - cleanup non-empty empty lists: ie 'None', '', and None values
+#-------------------------------------------------------------------------
+emptyContentDropSet:
+    - ''
+    - 'None'
+    - null      # returns None in python
+
+    
+#-------------------------------------------------------------------------
+# - output files
+#   defining these values overwrites the command line configuration
+#-------------------------------------------------------------------------
+# output_path: .
+# output_file: addr.json
+        

@@ -1,0 +1,35 @@
+# YAML config file for scripts/PyBookmark_viewer.py
+
+# file (str) is the json file to use; relative path below is given but MUCH safer to give an absolute path
+file: addr.json
+
+# load_newest (boolean): searches via pybookmark.pybookmarkjsonviewr.addr_newest()
+#   matches against addr.20220104.142849.json where date time is inserted in file name
+load_newest: True
+
+# output_dir (str)  # same as input is the default
+
+# width (int): 800 is default
+width: 1250
+
+# height (int): 800 is default
+
+# configure search, set AND, OR, NOT and search TERM for each. Also set single ignorecase checkbox
+#   not recommended to set multiple boxes but to each their own
+search:
+    URL:
+#        - AND
+        - OR
+#        - NOT
+#        - 'search term'
+    label:
+        - OR
+    tags:
+        - OR
+#        - NOT
+    description:
+        - OR
+#   file:
+    ignorecase: True
+    phrase: False
+
