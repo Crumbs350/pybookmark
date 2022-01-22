@@ -63,6 +63,18 @@ You should not use PyBookmark if:
    * Uses Tk to provide GUI
    * note to run from a desktop launcher in linux may require a separate shell script with interactive mode enabled see [reference](https://forums.linuxmint.com/viewtopic.php?p=2127717#p2127717)
 
+## File Layout
+* Data contains
+  - reference YAML configurations
+  - example input bookmark.html files
+  - example output json files
+* pybookmark
+  - where the library code is, see run options above for types
+  - where the icon file is
+* scripts
+  - where command line tools live
+  - see run options above for more details
+
 ## Data Structures
 
 The core data structure is AddrStruct.  
