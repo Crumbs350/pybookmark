@@ -65,15 +65,15 @@ You should not use PyBookmark if:
 
 ## Data Structures
 
-The core data structure is AddrStruct.
-  addrStruct: dictionary of url keys with list of list values
-     key = URL address
-     [0] = label
-     [1] = age
-     [2] = tags
-     [3] = location
-     [4] = description
-     [5] = file location
+The core data structure is AddrStruct.  
+  addrStruct: dictionary of url keys with list of list values  
+     key = URL address  
+     [0] = label  
+     [1] = age  
+     [2] = tags  
+     [3] = location  
+     [4] = description  
+     [5] = file location  
 
 ##  Requirements Overview
 Created using Python 3.7 or higher and Beautiful Soup 4.
