@@ -62,6 +62,7 @@ import time
 
 sys.path.append(os.path.dirname(__file__))
 import pybookmark.bookmarks_parse as bp
+from pybookmark.pybookmarkjsonviewer import get_time_str
 
 # if above fails run following because it thinks path bookmarks_parse is the package
 #   from bookmarks_parse import bookmarks_parse as bp
@@ -96,6 +97,7 @@ if __name__ == '__main__':
                             'Currently does not work due to underling code')
     parser.add_argument('output',
                         type=str,
+                        required=False,
                         help='''file path for output file
                                 if absent uses path of input file
                                 value can be overwritten by the yaml
@@ -107,6 +109,10 @@ if __name__ == '__main__':
                             import existing bookmarks then only search a
                             a small subset of the new bookmarks to add. Value
                             overwritten by yaml output_file configuration value.''')
+    parser.add_argument('-t', dest='timestamp_no',
+                        required=False, 
+                        action='store_true',
+                        help='''If set do not timestamp.''')
     parser.add_argument('-y', '--config', type=str, default=None,
                         help='yaml config file path for modification variables.')
                         
@@ -243,7 +249,16 @@ if __name__ == '__main__':
 
     # create _original name and save unaltered address set to it
     file_parts = list(os.path.splitext(output_file_basename))
-    file_parts[0] = file_parts[0] + '_original'
+    
+    if not args.timestamp_no:
+        # add a timestamp (modifies basename)
+        file_parts1 = file_parts.copy()
+        file_parts1[0] = f'{file_parts1[0]}.{get_time_str()}'
+        output_file_basename = ''.join(file_parts1)
+        file_parts[0] = f'{file_parts[0]}_original.{get_time_str()}'
+    else:
+        # no timestamp
+        file_parts[0] = file_parts[0] + '_original'
     output_file_original = ''.join(file_parts)
     bp.writeAddressStruct(addrStruct,
                           os.path.join(output_path, output_file_original))
