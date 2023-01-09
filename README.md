@@ -92,6 +92,7 @@ Created using Python 3.7 or higher and Beautiful Soup 4.
 
 ## Version History
 | Version | Description |
+| ------------- | ------------- |
 | 1.0.0 | first release |
 | 1.1.0 | refactored to use classes |
-1.1.1   
+
