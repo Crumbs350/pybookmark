@@ -22,7 +22,6 @@ ref: text: https://www.tutorialspoint.com/python/tk_text.htm
 
 import argparse
 import datetime
-import glob
 import os
 import re
 import time
@@ -30,12 +29,12 @@ import tkinter as tk
 import tkinter.ttk as ttk
 import webbrowser
 from tkinter import messagebox, filedialog, Tk, simpledialog
-from urllib.parse import urlparse
 import yaml
 
 # run imports from top of bookmarks_merge.py
 import sys
-import pybookmark.bookmarks_parse as bp
+import pybookmark.bookmarks_class as bc
+import pybookmark.support as support
 
 
 def get_version(project_dir):
@@ -59,88 +58,10 @@ PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 VERSION = get_version(PROJECT_DIR)
 
 
-def addr_newest(file_use, file_path=None):
-    """ given file_use use find the newest json file in the same path with
-        the same starting name
-        
-        some_name.<anything>.json
-        
-        which means it returns the newest some_name.*.json file
-        meant to match the latest timestamped book where anthing is the time
-        
-    Args:
-        file_use (str): reference name for file
-            if file_path is not specified it must be an absolute path
-        file_path (str): file_path to search, if None pulls from file_use
-            default=None
-    Returns:
-        (str): newest file that matches the file_use pattern
-            if no matching files are found it returns None
-    """
-    file_use_base = os.path.basename(file_use).split('.')[0]
-    if file_path is None:
-        file_path = os.path.dirname(file_use)
-    files = glob.glob(
-        os.path.join(file_path, f'{file_use_base}*.json'),
-        recursive=True)
-    # return the newest file by ctime in the set of files
-    if len(files) > 0:
-        return max(files, key = os.path.getctime)
-    else:
-        return None
-
-
-def field_to_list(field):
-    """give a field, presumably str, convert to list dropping '' and None values
-    
-    Args:
-        field (*): value to convert, expect string but can put anything
-            into a list
-    Returns:
-        either input as list or if input = '' or None return []
-        field if type(field) is list
-        []  if input is '' or None
-        [field] otherwise
-    """
-    if type(field) is list:
-        fieldaslist = []
-        for fieldx in field:
-            if fieldx is None:
-                continue
-            if type(fieldx) is str and fieldx == '':
-                continue
-            fieldaslist.append(fieldx)
-        return fieldaslist
-    
-    if field is None:
-        fieldaslist = []
-    elif type(field) is str:
-        if len(field) == 0:
-            fieldaslist = []
-        else:
-            fieldaslist = [field]
-    else:
-        fieldaslist = [field]
-    return fieldaslist
-
-
 def get_time_str(format_str='%Y%m%d.%H%M%S'):
     """ return current time as formatted string """
     return time.strftime(format_str)
     
-
-# @staticmethod
-def is_url(text):
-    """ check input text is url or not
-
-    Args:
-        text (str): input text
-    Return:
-        (boolean) url or not
-    """
-    parsed = urlparse(text)
-    return all([parsed.scheme, parsed.netloc, parsed.path])
-
 
 class ScrollText(tk.Frame):
     """ define a scrolling text box
@@ -493,7 +414,7 @@ def test_ScrolledTextPair():
 
     
 def test_BookmarkGUI():
-    addrStruct = bp.readAddressStruct(os.path.join(PROJECT_DIR, 'data', 'addr.json'))
+    addrStruct = bc.bookmarks.Address_Struct_Read(os.path.join(PROJECT_DIR, 'data', 'addr.json'))
     root= tk.Tk()
     root.minsize(500, 500)  # width x height
     app = BookmarkGUI(root, bookmarks_data=addrStruct)
@@ -519,7 +440,7 @@ class BookmarkGUI(tk.Frame):
         self.output_dir = output_dir
         self.update_action = False  # boolean tracks if change occurred, if yes save updates on exit
         
-        self.addrStruct = {}  # address bookmarks data dictionary
+        self.addrStruct = bc.bookmarks()  # address bookmarks data dictionary
         # searchAddressStruct: copied from bookmarks_parse definition
         #    [-1] = search URL addresses themselves
         #     [0] = label
@@ -545,8 +466,8 @@ class BookmarkGUI(tk.Frame):
         if bookmarks_data is not None:
             if type(bookmarks_data) is str:
                 # assumes file path listing to read in the bookmark data
-                self.addrStruct = bp.readAddressStruct(bookmarks_data)
-            elif type(bookmarks_data) is dict:
+                self.addrStruct = bc.bookmarks.Address_Struct_Read(bookmarks_data)
+            elif type(bookmarks_data) in [dict, type(bc.bookmarks())]: # QQQ will dict still work? maybe not
                 # assumes bookmarks_data is the addrStruct data
                 self.addrStruct = bookmarks_data
         
@@ -646,7 +567,7 @@ class BookmarkGUI(tk.Frame):
         self.search_box_better.pack(side=tk.TOP, fill='x', padx=PADX)
 
         # insert search tab content and|or|not buttons in same order as addrJson elements
-        # need checkboxes for searching specific elements easily per bp.searchAddressStruct() definition
+        # need checkboxes for searching specific elements easily per bc.search_address_struct() definition
         # first generate header-column labels for the SearchLogic controls
         search_chk_list_label_frame = tk.Frame(tab1)  # use to pack text
         search_chk_list_label_frame.pack(side=tk.TOP, fill=tk.X, expand=True)
@@ -807,12 +728,13 @@ class BookmarkGUI(tk.Frame):
         
         # reverse lookup by index the url in the other list
         url = self.bookmark_lists.left.get(labeli)
-        age = self.addrStruct[url][1]
-        tags = self.addrStruct[url][2]
-        location = self.addrStruct[url][3]
-        description = self.addrStruct[url][4]
-        
-        edit_update_list = [url, label, age, tags, location, description]
+        edit_update_list = [url,
+                            label,
+                            self.addrStruct[url].get_value('age'),
+                            self.addrStruct[url].get_value('tags'),
+                            self.addrStruct[url].get_value('location'),
+                            self.addrStruct[url].get_value('description')
+                            ]  # REF.EUL
         self.view_edit_update(edit_update_list)
         
     def click_double_label(self, event=None):
@@ -884,9 +806,9 @@ class BookmarkGUI(tk.Frame):
     def click_search(self, event=None):
         """ using the defined search parameters reduce url/label to matches 
         
-            note default bp.searchAddressStructWrapper() is or behavior
+            note default bc.search_address_struct_wrapper() is or behavior
             want to search inclusive (or) then search exclusive (and) using
-            specific bp.searchAddressStruct() where both return a list of urls
+            specific bc.search_address_struct() where both return a list of urls
             but must account for shared vs specific search pattern
         Args:
             event: event argument that is passed by the click event
@@ -944,8 +866,7 @@ class BookmarkGUI(tk.Frame):
                 #   if want to do phrase addition need to handle as separate searches that build up like and and not
                 # pattern_or = self.phrase_adder(pattern_or)
                 # print(f'SEarch OR2 {type(pattern_or)} string {pattern_or}')
-                urls_found = bp.searchAddressStructWrapper(
-                    self.addrStruct, 
+                urls_found = self.addrStruct.search_address_struct_wrapper(
                     pattern_or, 
                     element_or,
                     ignore_case=True if self.var_chk_ignorecase.get() == 1 else False)
@@ -974,8 +895,7 @@ class BookmarkGUI(tk.Frame):
                             # print(f'search_or past list check') # DDD
                             for patternisi in patternis_list:
                                 # print(f'search or3: {patternisi}::{patterni}') # DDD
-                                urls_found = urls_found + bp.searchAddressStruct(
-                                    self.addrStruct,
+                                urls_found = urls_found + self.addrStruct.search_address_struct(
                                     patternisi,
                                     element_or[patterni],
                                     ignore_case=True if self.var_chk_ignorecase.get() == 1 else False)
@@ -1013,17 +933,17 @@ class BookmarkGUI(tk.Frame):
                     pattern_andL = self.phrase_adder(pattern_and)
                     if type(pattern_andL) is list and len(pattern_andL) > 1:
                         for patterni in pattern_andL:
-                            urls_found = bp.searchAddressStruct(
-                                {urlkey: self.addrStruct[urlkey] for urlkey in urls_found},
+                            urls_found = self.addrStruct.search_address_struct(
                                 patterni,
                                 elementi,
-                                ignore_case=True if self.var_chk_ignorecase.get() == 1 else False)
+                                ignore_case=True if self.var_chk_ignorecase.get() == 1 else False,
+                                url_list=urls_found)
                     else:
-                        urls_found = bp.searchAddressStruct(
-                            {urlkey: self.addrStruct[urlkey] for urlkey in urls_found},
+                        urls_found = self.addrStruct.search_address_struct(
                             pattern_and,
                             elementi,
-                            ignore_case=True if self.var_chk_ignorecase.get() == 1 else False)
+                            ignore_case=True if self.var_chk_ignorecase.get() == 1 else False,
+                            url_list=urls_found)
                     search_and_any = True
                     # print(f'click_search: AND: {pattern_and}::::{elementi} found {len(urls_found)}') # DDD
             if len(urls_found) == 0:
@@ -1037,14 +957,13 @@ class BookmarkGUI(tk.Frame):
             pattern_sharedL = self.phrase_adder(pattern_shared)
             if type(pattern_sharedL) is list and len(pattern_sharedL) > 1:
                 for patterni in pattern_sharedL:
-                    urls_found = bp.searchAddressStruct(
-                        {urlkey: self.addrStruct[urlkey] for urlkey in urls_found},
+                    urls_found = self.addrStruct.search_address_struct(
                         patterni,
                         -1,
-                        ignore_case=True if self.var_chk_ignorecase.get() == 1 else False)
+                        ignore_case=True if self.var_chk_ignorecase.get() == 1 else False,
+                        url_list=urls_found)
             else:
-                urls_found = bp.searchAddressStruct(
-                    self.addrStruct,
+                urls_found = self.addrStruct.search_address_struct(
                     pattern_shared,
                     -1,
                     ignore_case=True if self.var_chk_ignorecase.get() == 1 else False)
@@ -1070,11 +989,11 @@ class BookmarkGUI(tk.Frame):
                         search_not = True
                 if search_not:
                     # search NOT set and pattern defined therefore search
-                    urls_to_drop = bp.searchAddressStruct(
-                        {urlkey: self.addrStruct[urlkey] for urlkey in urls_found},
+                    urls_to_drop = self.addrStruct.search_address_struct(
                         pattern_not,
                         elementi,
-                        ignore_case=True if self.var_chk_ignorecase.get() == 1 else False)
+                        ignore_case=True if self.var_chk_ignorecase.get() == 1 else False,
+                        url_list=urls_found)
                     # print(f'drop these:\t{urls_to_drop}')
                     urls_found = [x for x in urls_found if x not in urls_to_drop]
                     # print(f'click_search: NOT: {pattern_not}::::{elementi} dropped {len(urls_to_drop)}, found {len(urls_found)}') # DDD
@@ -1141,25 +1060,28 @@ class BookmarkGUI(tk.Frame):
         self.edit_url.entryText.set(edit_update_list[0]) # set the text
 
         addr_lab = edit_update_list[1]
-        addr_lab = field_to_list(addr_lab)
+        addr_lab = support.field_to_list(addr_lab)
         # print(f'view_edit_update: push: {type(addr_lab)}::::{addr_lab}::::')  # DDD
         self.edit_label.entryText.set(f'{addr_lab}') # set the text
         
         # print(f'view_edit_update: {type(edit_update_list[2])}::{edit_update_list[2]} for {edit_update_list}') # DDD
-        age_str = str(datetime.datetime.fromtimestamp(int(edit_update_list[2])))
+        if type(edit_update_list[2]) is bc.AgeAsInt:
+            age_str = edit_update_list[2].get_time_str()
+        else:
+            age_str = str(datetime.datetime.fromtimestamp(int(edit_update_list[2])))
         self.edit_age.entryText.set(f'{age_str}') # set the text
         
         addr_tag = edit_update_list[3]
-        addr_tag = field_to_list(addr_tag)
+        addr_tag = support.field_to_list(addr_tag)
         self.edit_tags.entryText.set(f'{addr_tag}') # set the text
                 
         addr_loc = edit_update_list[4]
-        addr_loc = field_to_list(addr_loc)        
+        addr_loc = support.field_to_list(addr_loc)        
         self.edit_location.sel_text.delete(0, tk.END)  # clear the text
         self.edit_location.sel_text.insert(tk.END, f'{addr_loc}') # set the text
         
         addr_desc = edit_update_list[5]
-        addr_desc = field_to_list(addr_desc)
+        addr_desc = support.field_to_list(addr_desc)
         self.edit_description.sel_text.delete(0, tk.END)  # clear the text
         self.edit_description.sel_text.insert(tk.END, f'{addr_desc}') # set the text
         
@@ -1178,13 +1100,14 @@ class BookmarkGUI(tk.Frame):
                 print('URL not found')
         if url not in self.addrStruct: # this seems very unlikely
             return
-        label = self.addrStruct[url][0]
-        age = self.addrStruct[url][1]
-        tags = self.addrStruct[url][2]
-        location = self.addrStruct[url][3]
-        description = self.addrStruct[url][4]
 
-        edit_update_list = [url, label, age, tags, location, description]
+        edit_update_list = [url, 
+                            self.addrStruct[url].get_value('label'),
+                            self.addrStruct[url].get_value('age'),
+                            self.addrStruct[url].get_value('tags'),
+                            self.addrStruct[url].get_value('location'),
+                            self.addrStruct[url].get_value('description')
+                            ]  # REF.EUL
         self.view_edit_update(edit_update_list)
 
     def view_url_update(self, url_list=None):
@@ -1202,7 +1125,7 @@ class BookmarkGUI(tk.Frame):
         label_list = []
         # generate the label_list from addrStruct for the urls specified
         for addr in url_list:
-            label_list.append(self.addrStruct[addr][0][0]) # the url name label
+            label_list.append(self.addrStruct[addr].get_value('label')[0]) # the url name label
         self.bookmark_lists.update(url_list, label_list, sort_side=2)
     
     def view_search_reset(self):
@@ -1212,7 +1135,7 @@ class BookmarkGUI(tk.Frame):
     def add_bookmark(self):
         """ pull new bookmark information to add bookmark by:
             check for existance
-            call bp methods to add it
+            call bookmark class, bc, methods to add it
         """
         addr_url = self.new_url.entryText.get()
         if len(addr_url) == 0:
@@ -1225,24 +1148,24 @@ class BookmarkGUI(tk.Frame):
         else:
             # new url, pull content from self.new_* definitions
             addr_lab = self.new_label.get_text_as_type()
-            addr_lab = field_to_list(addr_lab)
+            addr_age = bc.AgeAsInt(int(time.time()))    # age in posix time as string
             addr_tag = self.new_tags.get_text_as_type()
-            addr_tag = field_to_list(addr_tag)
             addr_loc = self.new_location.get_text_as_type()
-            addr_loc = field_to_list(addr_loc)
             addr_desc = self.new_description.get_text_as_type()
-            addr_desc = field_to_list(addr_desc)
             
-            # set the content in the addrStruct
-            self.addrStruct[addr_url] = [
-                addr_lab,    # label list
-                str(int(time.time())),      # age in posix time as string
-                addr_tag,    # tags list
-                addr_loc,    # location list
-                addr_desc,   # description list
-                []           # file location list
-                ]
-            
+            # create bookmark in the address structure
+            new_bookmark = bc.bookmarkAttr(())
+            new_bookmark.set_array_keys(
+                **{'label': support.field_to_list(addr_lab),
+                 'age': addr_age,
+                 'tags': support.field_to_list(addr_tag),
+                 'location': support.field_to_list(addr_loc),
+                 'description': support.field_to_list(addr_desc),
+                 'file location': []
+                 }
+                )
+            self.addrStruct.add(addr_url, new_bookmark)
+           
             # update the GUI log and list views
             self.console_log.add_text(f'url added: {addr_url} at {time.time()}')
             self.bookmark_lists.add([addr_url], addr_lab)
@@ -1264,27 +1187,27 @@ class BookmarkGUI(tk.Frame):
             return
         
         # update the addrStruct with the edited bookmark information
-        addr_age = self.addrStruct[addr_url][1]
+        #  addr_age = self.addrStruct[addr_url].get_value('age')# [1]
         # print(f'edit_bookmark: pull: age: {type(addr_age)}::::{addr_age}::::') # DDD
-        addr_file = self.addrStruct[addr_url][5]
+        addr_file = self.addrStruct[addr_url].get_value('file location')# [5]
         addr_lab = self.edit_label.get_text_as_type()
         # print(f'edit_bookmark: pull: label: {type(addr_lab)}::::{addr_lab}::::') # DDD
-        addr_lab = field_to_list(addr_lab)
+        addr_lab = support.field_to_list(addr_lab)
         addr_tag = self.edit_tags.get_text_as_type()
-        addr_tag = field_to_list(addr_tag)
+        addr_tag = support.field_to_list(addr_tag)
         addr_loc = self.edit_location.get_text_as_type()
-        addr_loc = field_to_list(addr_loc)
+        addr_loc = support.field_to_list(addr_loc)
         addr_desc = self.edit_description.get_text_as_type()
-        addr_desc = field_to_list(addr_desc)
+        addr_desc = support.field_to_list(addr_desc)
 
-        self.addrStruct[addr_url] = [
-            addr_lab,    # label list
-            addr_age,    # age in posix time as string
-            addr_tag,    # tags list
-            addr_loc,    # location list
-            addr_desc,   # description list
-            addr_file    # file location list
-            ]
+        # assign the updated values to the structure
+        self.addrStruct[addr_url].set_value('label', addr_lab, overwrite=True)
+        #  self.addrStruct[addr_url].set_value('age', addr_age, overwrite=True)  # XXX: allow age update
+        self.addrStruct[addr_url].set_value('tags', addr_tag, overwrite=True)
+        self.addrStruct[addr_url].set_value('location', addr_loc, overwrite=True)
+        self.addrStruct[addr_url].set_value('description', addr_desc, overwrite=True)
+        self.addrStruct[addr_url].set_value('file location', addr_file, overwrite=True)
+       
         self.console_log.add_text(f'url updated: {addr_url} at {time.time()}')
         self.update_action = True # set change tracker to true
         self.write_log(change_type='Edit', change_url=addr_url)
@@ -1342,7 +1265,7 @@ class BookmarkGUI(tk.Frame):
         if not(confirm_int is None or confirm_int % 2 != 0):
             # you confirmed the action
             if addr_url in self.addrStruct.keys():
-                del self.addrStruct[addr_url]
+                self.addrStruct.delete(addr_url)
                 url_list = [url for url in self.addrStruct_url_list if url != addr_url]
                 self.view_url_update(url_list)  # updates the GUI
                 self.console_log.add_text(f'url removed: {addr_url} at {time.time()}')        
@@ -1359,7 +1282,7 @@ class BookmarkGUI(tk.Frame):
         path_save = os.path.join(self.output_dir,
                                  f'{self.output_base}.{get_time_str()}.json')
         print(f'Exiting: Save the state to {path_save}')  
-        bp.writeAddressStruct(self.addrStruct, path_save)
+        self.addrStruct.write_json(path_save)
         
     def set_output_filename(self, event=None):
         """ change base filename to save data to. GUI calls
@@ -1436,7 +1359,7 @@ class BookmarkGUI(tk.Frame):
         
     def open_url(self, url):
         """ use webbrowser package to open a url in default webbrowser """
-        if is_url(url):
+        if support.is_url(url):
             webbrowser.open(url)
         else:
             self.console_log.add_text(f'Error: this is not url: {url}')
@@ -1469,6 +1392,8 @@ def view_data(json_file=None, json_data=None, initial_dir=None, output_dir=None,
         json_data (dict): dictionary generated from json data content
             alternative to json_file for defining content to view
             this is less tested and some functionality may not be configurable
+            note: straight dict may not work after change to use Bookmarks
+                class but passing bc.Bookmarks object should work without issue
             default = None
         initial_dir (str): path to start in. default = None
         output_dir (str): path to save files to; uses input json_file if
@@ -1503,7 +1428,7 @@ def view_data(json_file=None, json_data=None, initial_dir=None, output_dir=None,
     # - handle input data definition: get the data into the 'action' class
     addrStruct = None  # starting state
     if json_file:
-        addrStruct = bp.readAddressStruct(json_file)
+        addrStruct = bc.bookmarks.Address_Struct_Read(json_file)
         if output_dir is None:
             output_dir = os.path.dirname(json_file)
         output_base = os.path.basename(json_file).split('.')[0]
@@ -1517,7 +1442,7 @@ def view_data(json_file=None, json_data=None, initial_dir=None, output_dir=None,
     
     # clean the addrStruct of invalid values
     emptyContentDropSet = ['', 'None', None]
-    addrStruct = bp.cleanAddressStruct(addrStruct, emptyContentDropSet)
+    addrStruct.clean_address_struct(emptyContentDropSet)
 
     # - define the GUI
     app = BookmarkGUI(root, bookmarks_data=addrStruct, output_dir=output_dir, output_base=output_base, config=config)
@@ -1630,7 +1555,7 @@ def main():
     # set file and directory paths
     file_use = args.file
     if args.newest:
-        file_use = addr_newest(file_use)
+        file_use = support.addr_newest(file_use)
     if args.dir:
         output_dir = args.dir
     else:
@@ -1673,7 +1598,7 @@ def main():
             output_dir = os.path.abspath(os.path.dirname(file_use))
             
         if config_args['load_newest']:
-            file_use = addr_newest(file_use)
+            file_use = support.addr_newest(file_use)
     else:
         config_args = None
 
@@ -1686,7 +1611,7 @@ def main():
 
 
 def test_view_data():
-    addrStruct = bp.readAddressStruct(os.path.join(PROJECT_DIR, 'data', 'addr.json'))
+    addrStruct = bc.bookmarks.Address_Struct_Read(os.path.join(PROJECT_DIR, 'data', 'addr.json'))
     view_data(json_data=addrStruct)
 
 

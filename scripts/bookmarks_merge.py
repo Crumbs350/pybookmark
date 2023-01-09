@@ -49,7 +49,6 @@ caveats:
 """
 
 import argparse
-import json
 import yaml
 
 # ref: https://stackoverflow.com/questions/8804830/python-multiprocessing-picklingerror-cant-pickle-type-function
@@ -62,6 +61,8 @@ import time
 
 sys.path.append(os.path.dirname(__file__))
 import pybookmark.bookmarks_parse as bp
+import pybookmark.bookmarks_class as bc
+import pybookmark.support as support
 from pybookmark.pybookmarkjsonviewer import get_time_str
 
 # if above fails run following because it thinks path bookmarks_parse is the package
@@ -97,7 +98,6 @@ if __name__ == '__main__':
                             'Currently does not work due to underling code')
     parser.add_argument('output',
                         type=str,
-                        required=False,
                         help='''file path for output file
                                 if absent uses path of input file
                                 value can be overwritten by the yaml
@@ -194,14 +194,13 @@ if __name__ == '__main__':
         os.makedirs(output_path)
 
     # - import existing json structure to append to
-    addrStruct = {}
-    if args.json_file is not None:
-        if os.path.exists(args.json_file):
-            with open(args.json_file, 'r') as fHan:
-                addrStruct = json.load(fHan)
-            if len(addrStruct) > 0:
-                print(f'Read {len(addrStruct)} urls from {args.json_file}')
-
+    if (args.json_file is not None) and os.path.exists(args.json_file):
+        addrStruct = bc.bookmarks.Address_Struct_Read(args.json_file)
+        if len(addrStruct) > 0:
+            print(f'Read {len(addrStruct)} urls from {args.json_file}')
+    else:
+        addrStruct = bc.bookmarks()
+   
     # - run code to merge the bookmarks found in the input file_path
     print('Start reading input path')
     t1 = time.time()
@@ -236,7 +235,7 @@ if __name__ == '__main__':
     
     # build dictionary by address and list data structure
     # merges but does not clean the data
-    addrStruct = bp.buildAddressStruct(addresses, addrStruct)
+    addrStruct.build_address_struct(addresses)
         # key = addr
         # [0] = label
         # [1] = age
@@ -260,8 +259,7 @@ if __name__ == '__main__':
         # no timestamp
         file_parts[0] = file_parts[0] + '_original'
     output_file_original = ''.join(file_parts)
-    bp.writeAddressStruct(addrStruct,
-                          os.path.join(output_path, output_file_original))
+    addrStruct.bc.write_json(os.path.join(output_path, output_file_original))
 
     #
     # YYY: below this point need to remove all parse_html output variables
@@ -289,10 +287,10 @@ if __name__ == '__main__':
     
     # - for each address reduce location set by: replace, reduce, & drop
     for addr_key in addrStruct.keys(): # modifying [3] the locations
-        reduced = addrStruct[addr_key][3] 
+        reduced = addrStruct[addr_key].get_value('location')  #[3] 
         
         # reduce list length to search by using set, replacing existing list
-        if len(addrStruct[addr_key][3]) > 0:
+        if len(addrStruct[addr_key].get_value('location')) > 0:
             # remove the leading and trailing whitespace + reduce to unique
             # this also removes None values preventing errors below
             reduced = list(set([x.strip() for x in reduced if x is not None]))
@@ -383,18 +381,18 @@ if __name__ == '__main__':
             reduced = ['']
         
         # update the data element
-        addrStruct[addr_key][3] = reduced
+        addrStruct[addr_key].set_value('location', reduced, overwrite=True)
     
     # - do duplicate locations still exist?
     with open(os.path.join(output_path, 'duplicate_addr_locations.txt'), 'wt') as fHan:
         dupCount = 0
         for addr_key in addrStruct.keys():
-            if len(addrStruct[addr_key][3]) > 1:
+            if len(addrStruct[addr_key].get_value('location')) > 1:
                 dupCount = dupCount + 1  # count number of duplicated addresses
                 # write out the addresses and unique set of locations
                 fHan.write(addr_key 
                            + ', '
-                           + ':::'.join(list(set(addrStruct[addr_key][3])))
+                           + ':::'.join(list(set(addrStruct[addr_key].get_value('location'))))
                            +'\n')
     print(f'Still have {dupCount} addresses with multiple locations')
     
@@ -403,7 +401,7 @@ if __name__ == '__main__':
     loc_dup_list = []   # duplicate locations
     loc_dup_set = set() # set of duplicate location groups
     for addr_key in addrStruct.keys():
-        loc_now = addrStruct[addr_key][3]
+        loc_now = addrStruct[addr_key].get_value('location')   #[3]
         loc_list = loc_list + loc_now
         if len(loc_now) > 1:
             loc_now.sort()  # so tuples below match
@@ -454,7 +452,7 @@ if __name__ == '__main__':
         #   single previously defined label
         for addr in addr_label_mod_dict:    # assume mod_dict is smaller than addrStruct
             if addr in addrStruct:
-                addrStruct[addr][0] = addr_label_mod_dict[addr]
+                addrStruct[addr].set_value('label', addr_label_mod_dict[addr], overwrite=True)
                 # code below replaces all individually (ie duplicate definitions)
                 # for alabi,alabn in enumerate(addrStruct[addr][0]):
                 #    addrStruct[addr][0][alabi] = addr_label_mod_dict[addr]
@@ -464,18 +462,21 @@ if __name__ == '__main__':
     # code does not add in existing addr_label_mod_dict definitions
     addr_dict2 = {}  # the set of duplicate addresses
     for addr in addrStruct:
-        if len(addrStruct[addr][0]) > 0:
+        if len(addrStruct[addr].get_value('label')) > 0:
             # remove the leading and trailing whitespace
-            if type(addrStruct[addr][0]) is str:
+            if type(addrStruct[addr].get_value('label')) is str:
                 # this should not happen; fix it
                 print(f'addrStruct label str fixed: {addr}')
-                addrStruct[addr][0] = [(addrStruct[addr][0]).strip()]
+                addrStruct[addr].set_value(
+                    'label', 
+                    [(addrStruct[addr].get_value('label')).strip()],
+                    overwrite=True)
             else:
-                reduced = list(set([x.strip() for x in addrStruct[addr][0] if x is not None]))
-                addrStruct[addr][0] = reduced
+                reduced = list(set([x.strip() for x in addrStruct[addr].get_value('label') if x is not None]))
+                addrStruct[addr].set_value('label', reduced, overwrite=True)
         # by using addrStruct not addresses must account for possible lists
         # in label and descriptions
-        addr_label = addrStruct[addr][0]
+        addr_label = addrStruct[addr].get_value('label')
         if len(addr_label) > 1:
             addr_dict2[addr] = addr_label
 
@@ -507,24 +508,26 @@ if __name__ == '__main__':
         desc_joined = []
         if addr not in addrStruct:
             continue
-        for descn in addrStruct[addr][4]:
+        for descn in addrStruct[addr].get_value('description'): # [4]:
             desc_joined = desc_joined + descn.split('\n')
-        addrStruct[addr][4] = ['\n'.join(list(set(desc_joined)))]
+        addrStruct[addr].set_value('description',
+                                   ['\n'.join(list(set(desc_joined)))],
+                                   overwrite=True)
       
     # - reduce descriptions by applying bp.file_read_desc_mod_by_addr() output moved to the yaml file
     for addr in desc_dup_mod.keys():
         if debug:
             print(f'{addr}:::{desc_dup_mod[addr][0:10]}')
         if addr in addrStruct:
-            addrStruct[addr][4] = desc_dup_mod[addr]
+            addrStruct[addr].set_value('description', desc_dup_mod[addr], overwrite=True)
             
     # - reduce to the unique set of descriptions irrespective of order
     #   also cleans descriptions of leading/trailing spaces
     # - reduce the descriptions retaining order and stripping leading/trailing spaces and newlines
     for addr in addrStruct:
-        if len(addrStruct[addr][4]) > 0:
-            reduced = list(set([x.strip().strip('\n') for x in addrStruct[addr][4] if x is not None]))
-            addrStruct[addr][4] = reduced
+        if len(addrStruct[addr].get_value('description')) > 0:
+            reduced = list(set([x.strip().strip('\n') for x in addrStruct[addr].get_value('description') if x is not None]))
+            addrStruct[addr].set_value('description', reduced, overwrite=True)
 
     # - which addresses still have multiple descriptions?
     # XXX: after exporting to duplicate_addr_descriptions need to use it to manually update
@@ -532,10 +535,10 @@ if __name__ == '__main__':
     #       could also generate bp.file_read_desc_mod_by_addr() but seems unnecessary
     with open(os.path.join(output_path, 'duplicate_addr_descriptions.txt'), 'wt') as fHan:
         for addr in addrStruct:
-            if len(addrStruct[addr][4]) > 1:
+            if len(addrStruct[addr].get_value('description')) > 1:
                 fHan.write(addr 
                        + ', '
-                       + ':::'.join(addrStruct[addr][4])
+                       + ':::'.join(addrStruct[addr].get_value('description'))
                        +'\n')    
     
     #-------------------------------------------------------------------------
@@ -548,7 +551,7 @@ if __name__ == '__main__':
     #   the unique number of folder names at the path level using pandas
     paths = []
     for addr in addrStruct:
-        for path_now in addrStruct[addr][5]:
+        for path_now in addrStruct[addr].get_value('file location'): #[5]:
             path_now = os.path.dirname(path_now)
             if not(path_now in paths):
                 paths.append(path_now)
@@ -571,12 +574,13 @@ if __name__ == '__main__':
     # YYY: drop_count will have to be manually provided for addrStruct updates
     #   if handled separate from the code
     for addr in addrStruct:
-        addrStruct[addr][5] = [
+        addrStruct[addr].set_value('file location', [
             (os.path.sep).join(path_now.split(os.path.sep)[drop_count:]) 
-            for path_now in addrStruct[addr][5]]
+            for path_now in addrStruct[addr].get_value('file location')],
+            overwrite=True)
 
     # - reduce the file locations to the unique set using 
-    #   bp.reduce_filename to get file basename reduced 
+    #   support.reduce_filename to get file basename reduced 
     #   and location_set_mapping.tab dictionary to reduce paths
     loc_label_file = os.path.join(output_path, 'location_set_mapping.tab')
     loc_label_dict = {}
@@ -585,15 +589,16 @@ if __name__ == '__main__':
         loc_label_dict = bp.file_read_file_location_mod(loc_label_file, loc_label_dict)
     for addr in addrStruct:
         path_list = []
-        for pathn in addrStruct[addr][5]:
+        for pathn in addrStruct[addr].get_value('file location'):
             # this joins 2 types of file location reduction into 1 value per path
-            fbprf = bp.reduce_filename(pathn)   # this is a single value
+            fbprf = support.reduce_filename(pathn)   # this is a single value
             pathn_dir = os.path.dirname(pathn)
             if pathn_dir in loc_label_dict:
                 for pathn2 in loc_label_dict[pathn_dir]:
                     path_list.append(f'{pathn2}:::{fbprf}')
-        addrStruct[addr][5] = list(set(path_list))  # reduce to unique and write
-    
+        addrStruct[addr].set_value('file location', 
+                                   list(set(path_list)),  # reduce to unique and write
+                                   overwrite=True)
     # YYY: note the file location is so mangled by de-duplication that 
     #   an output file can not be generated from here to help in removing
     #   duplicate information but rather the original structure input must
@@ -602,11 +607,10 @@ if __name__ == '__main__':
     #-------------------------------------------------------------------------
     # - cleanup non-empty empty lists: ie 'None', '', and None values
     #-------------------------------------------------------------------------
-    addrStruct = bp.cleanAddressStruct(addrStruct, emptyContentDropSet)
+    addrStruct.bc.clean_address_struct(emptyContentDropSet)
     
     #-------------------------------------------------------------------------
     # - generate output files
     #-------------------------------------------------------------------------
-    bp.writeAddressStruct(addrStruct,
-                          os.path.join(output_path, output_file_basename))
-        
+    addrStruct.bc.write_json(os.path.join(output_path, output_file_basename))
+    

@@ -16,7 +16,8 @@ example:
 import os
 import yaml
 import pybookmark.pybookmarkjsonviewer as pyb
-   
+import pybookmark.support as support
+
 
 if __name__ == '__main__':
     config_f = os.path.join(os.path.abspath(os.path.curdir), 'pybookmark_viewer.yaml')
@@ -49,7 +50,7 @@ if __name__ == '__main__':
         height = config_args['height']
         
     if config_args['load_newest']:
-        file_use = pyb.addr_newest(file_use)
+        file_use = support.addr_newest(file_use)
     pyb.view_data(json_file = file_use,
                   initial_dir = initial_dir,
                   output_dir = output_dir, 
