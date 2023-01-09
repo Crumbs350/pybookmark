@@ -77,15 +77,25 @@ You should not use PyBookmark if:
 
 ## Data Structures
 
-The core data structure is AddrStruct.  
-  addrStruct: dictionary of url keys with list of list values  
-     key = URL address  
-     [0] = label  
-     [1] = age  
-     [2] = tags  
-     [3] = location  
-     [4] = description  
-     [5] = file location  
+The core data structure is AddrStruct. 
+
+addrStruct: dictionary of url keys with list of list values  
+    key = URL address  
+    [0] = label  
+    [1] = age  
+    [2] = tags  
+    [3] = location  
+    [4] = description  
+    [5] = file location  
+
+With Version 1.1.0 the AddrStruct has been mapped to classes:
+* bookmarkAttr
+  - defines basic bookmark attribute data object
+  - fundamentally a list of lists
+  - note the age uses new class AgeAsInt
+* bookmarks
+  - the colleciton of bookmarks is fundamentally a dictionary
+  - key = url and value = bookmarkAttr object
 
 ## Requirements Overview
 Created using Python 3.7 or higher and Beautiful Soup 4.
