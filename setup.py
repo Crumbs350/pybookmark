@@ -27,7 +27,8 @@ setup(
     # python_requires='>3.6.0',
     license='LICENSE',
     keywords="python bookmark json tkinter privacy",
-    packages=find_packages('pybookmark/', exclude=['tests']),  # find all the sub-packages
+    packages=find_packages(exclude=['tests']),   # find all the sub-packages
+    # packages=find_packages('pybookmark/', exclude=['tests']),  this version fails because the installed module can never be found
     include_package_data=True,
     py_modules=["scripts/PyBookmark_viewer", "scripts/bookmarks_merge"],
     entry_points={
