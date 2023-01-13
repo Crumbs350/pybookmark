@@ -1170,7 +1170,7 @@ class BookmarkGUI(tk.Frame):
            
             # update the GUI log and list views
             self.console_log.add_text(f'url added: {addr_url} at {time.time()}')
-            self.bookmark_lists.add([addr_url], addr_lab)
+            self.bookmark_lists.add([addr_url], [addr_lab])
             self.update_action = True # set change occurred
             self.write_log(change_type='Add', change_url=addr_url)
         
