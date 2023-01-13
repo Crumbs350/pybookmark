@@ -106,4 +106,8 @@ Created using Python 3.7 or higher and Beautiful Soup 4.
 | ------------- | ------------- |
 | 1.0.0 | first release |
 | 1.1.0 | refactored to use classes |
+| 1.1.1 | fix pypi file due to bug |
+| 1.1.1.1 | fixed list display bugs in viewer |
+
+
 
