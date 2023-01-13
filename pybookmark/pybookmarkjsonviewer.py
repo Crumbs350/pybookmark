@@ -239,9 +239,6 @@ class ScrolledTextPair(tk.Frame):
         Returns:
             no object returned, function updates listbox widget objects
         """
-        if len(left_list) != len(right_list):
-            print('Warning: ScrolledTextPair: unequal left & right lists')
-        
         self.update_left(left_list, clear=False)
         self.update_right(right_list, clear=False)
         
@@ -263,9 +260,14 @@ class ScrolledTextPair(tk.Frame):
             no object returned, function updates listbox widget objects
         """
         if len(left_list) != len(right_list):
-            print('Warning: ScrolledTextPair: unequal left & right lists')
-            
-        if sort_side == 1:
+            print('Warning: ScrolledTextPair: update: unequal left & right lists')
+        
+        if not isinstance(left_list, list) or not isinstance(right_list, list):
+            print('Warning: ScrolledTextPair: update: non-list passed. forced []')
+            left_list = []
+            right_list = []
+        
+        if sort_side == 1 and len(left_list) > 0:
             # first argument to zip is what sort by so sort by left_list
             # second argument is just reordered to match the sorted list
             # sort ref: https://stackoverflow.com/questions/7851077/how-to-return-index-of-a-sorted-list
@@ -273,7 +275,7 @@ class ScrolledTextPair(tk.Frame):
             combined = zip(left_list, right_list)
             zipped_sorted = sorted(combined, key=lambda x: x[0])
             left_list, right_list = map(list, zip(*zipped_sorted))
-        elif sort_side == 2:
+        elif sort_side == 2 and len(left_list) > 0:
             # first argument to zip is what sort by so sort by right_list
             # second argument is just reordered to match the sorted list
             combined = zip(right_list, left_list)
