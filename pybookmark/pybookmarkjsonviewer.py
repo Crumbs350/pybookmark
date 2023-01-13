@@ -242,7 +242,7 @@ class ScrolledTextPair(tk.Frame):
         self.update_left(left_list, clear=False)
         self.update_right(right_list, clear=False)
         
-    def update(self, left_list, right_list, sort_side = 0):
+    def update(self, left_list: list, right_list: list, sort_side:int = 0):
         """ update the left and right listbox values
         note may be cheaper to do this function outside to avoid double-loop
         
@@ -259,13 +259,16 @@ class ScrolledTextPair(tk.Frame):
         Returns:
             no object returned, function updates listbox widget objects
         """
+        if not isinstance(left_list, list):
+            print('Warning: ScrolledTextPair: update: non-list passed left. forced []')
+            left_list = [left_list]
+            
+        if not isinstance(right_list, list):
+            print('Warning: ScrolledTextPair: update: non-list passed right. forced []')
+            right_list = [right_list]
+        
         if len(left_list) != len(right_list):
             print('Warning: ScrolledTextPair: update: unequal left & right lists')
-        
-        if not isinstance(left_list, list) or not isinstance(right_list, list):
-            print('Warning: ScrolledTextPair: update: non-list passed. forced []')
-            left_list = []
-            right_list = []
         
         if sort_side == 1 and len(left_list) > 0:
             # first argument to zip is what sort by so sort by left_list
