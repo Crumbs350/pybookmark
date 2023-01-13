@@ -60,6 +60,8 @@ You should not use PyBookmark if:
      - $ python pybookmarkjsonviewer.py -f /path_to_json_file/sample.json
    * script: scripts.PyBookmark_viewer.py
      - runs against predefined yaml configuration in the same path
+     - this is the preferred run method
+     - change to the path with config data files, pybookmark_viewer.yaml, then call python [install path]/scripts/Pybookmark_viewer.py
    * Uses Tk to provide GUI
    * note to run from a desktop launcher in linux may require a separate shell script with interactive mode enabled see [reference](https://forums.linuxmint.com/viewtopic.php?p=2127717#p2127717)
 
@@ -88,7 +90,7 @@ addrStruct: dictionary of url keys with list of list values
     [4] = description  
     [5] = file location  
 
-With Version 1.1.0 the AddrStruct has been mapped to classes:
+Starting with Version 1.1.0 the AddrStruct has been mapped to classes:
 * bookmarkAttr
   - defines basic bookmark attribute data object
   - fundamentally a list of lists
@@ -108,6 +110,6 @@ Created using Python 3.7 or higher and Beautiful Soup 4.
 | 1.1.0 | refactored to use classes |
 | 1.1.1 | fix pypi file due to bug |
 | 1.1.1.1 | fixed list display bugs in viewer |
-
+| 1.1.1.2 | fix setup.py install bug to include scripts; now in data for tar.gz and wheel but not installed?? |
 
 

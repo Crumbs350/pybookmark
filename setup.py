@@ -30,7 +30,11 @@ setup(
     packages=find_packages(exclude=['tests']),   # find all the sub-packages
     # packages=find_packages('pybookmark/', exclude=['tests']),  this version fails because the installed module can never be found
     include_package_data=True,
-    py_modules=["scripts/PyBookmark_viewer", "scripts/bookmarks_merge"],
+    py_modules=["pybookmark.bookmarks_class",
+                "pybookmark.bookmarks_parse",
+                "pybookmark.pybookmarkjsonviewer",
+                "pybookmark.support"],
+    scripts=['scripts/PyBookmark_viewer.py', 'scripts/bookmarks_merge.py'],
     entry_points={
         'console_scripts': ['PyBookmark=PyBookmark.PyBookmark:PyBookmarkJSONViewer',
                             'bookmarks_parse=PyBookmark.PyBookmark:bookmarks_parse',
